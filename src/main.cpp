@@ -1,12 +1,13 @@
 #include <Arduino.h>
 #include <Adafruit_Neopixel.h>
+#include <map>
 
 #define NEOPIXEL D4
 Adafruit_NeoPixel pixel(1, NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 // Display dimensions
-#define DIGITS 10
-#define SEGMENTS 9
+#define NUM_DIGITS 10
+#define NUM_SEGMENTS 9
 
 // HV5812 Interface Pins
 #define DIN D0 // Input
@@ -37,8 +38,25 @@ Adafruit_NeoPixel pixel(1, NEOPIXEL, NEO_GRB + NEO_KHZ800);
 #define DIG_9  6
 #define DIG_10 5
 
-const uint8_t digits[] = {DIG_1, DIG_2, DIG_3, DIG_4, DIG_5, DIG_6, DIG_7, DIG_8, DIG_9, DIG_10};
-const uint32_t segFull = 0 | (1UL << SEG_A) | (1UL << SEG_B) | (1UL << SEG_C) | (1UL << SEG_D) | (1UL << SEG_E) | (1UL << SEG_F) | (1UL << SEG_G) | (1UL << SEG_H) | (1UL << SEG_DP);
+#include <patterns.h>
+
+/* We can only assume the segments' order until we actually test the board.
+*   _
+* |   |
+*   _
+* |   |
+*   _
+*    .
+*     ,
+*
+*   A
+* B   F
+*   G
+* C   E
+*   D
+*    DP
+*     H
+*/
 
 void setup() {
   Serial.begin(115200);
@@ -55,19 +73,20 @@ void setup() {
 }
 
 void loop() {
-  for (int i = 0; i < DIGITS; i++) {
+  for (int i = 0; i < NUM_DIGITS; i++) {
     digitalWrite(BLK, HIGH);
-    uint32_t packet = segFull;
-    packet |= (1UL << digits[i]);
+    uint32_t packet = PATTERN_FULL;
+    packet |= (1UL << DIGITS[i]);
     delay(2);
     
+    // clock an extra 0 because there's only 19 display segments
     digitalWrite(DIN, LOW);
     delay(2);
     digitalWrite(CLK, HIGH);
     delay(2);
     digitalWrite(CLK, LOW);
     for (int j = 0; j < 19; j++) {
-      int k = 18 - j;
+      // int k = 18 - j; 
       bool bitValue = (packet & (1U << j) != 0);
       digitalWrite(DIN, bitValue ? HIGH : LOW);
       delay(2);
