@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-constexpr uint8_t DIGITS[] = {DIG_1, DIG_2, DIG_3, DIG_4, DIG_5, DIG_6, DIG_7, DIG_8, DIG_9, DIG_10};
+constexpr uint8_t DIGITS[] = {DIG_0, DIG_1, DIG_2, DIG_3, DIG_4, DIG_5, DIG_6, DIG_7, DIG_8, DIG_9};
 
 constexpr uint32_t SEG_A_MASK  = 1UL << SEG_A;
 constexpr uint32_t SEG_B_MASK  = 1UL << SEG_B;

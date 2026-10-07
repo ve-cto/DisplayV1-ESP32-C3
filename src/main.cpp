@@ -27,16 +27,16 @@ Adafruit_NeoPixel pixel(1, NEOPIXEL, NEO_GRB + NEO_KHZ800);
 #define SEG_H  5
 
 // Each of the digit pins to their HVout pin...
-#define DIG_1  4
-#define DIG_2  13
-#define DIG_3  12
-#define DIG_4  11
-#define DIG_5  10
-#define DIG_6  9
-#define DIG_7  8
-#define DIG_8  7
-#define DIG_9  6
-#define DIG_10 5
+#define DIG_0  4
+#define DIG_1  13
+#define DIG_2  12
+#define DIG_3  11
+#define DIG_4  10
+#define DIG_5  9
+#define DIG_6  8
+#define DIG_7  7
+#define DIG_8  6
+#define DIG_9  5
 
 #include <patterns.h>
 
