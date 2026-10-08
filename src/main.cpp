@@ -78,7 +78,6 @@ struct Spinners {
 };
 Spinners spinners;
 
-
 void writePacket(uint32_t packet) {
   digitalWrite(BLK, HIGH);
   delay(2);
@@ -97,6 +96,7 @@ void writePacket(uint32_t packet) {
     delay(2);
     digitalWrite(CLK, LOW);
   }
+  digitalWrite(DIN, LOW);
   delay(2);
   digitalWrite(STR, HIGH);
   delay(2);
