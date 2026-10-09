@@ -47,7 +47,15 @@ When writing to the chip, we pull BLK high which clears the display. We clock in
 > A clock cycle is where we set the DIN pin to some value, HIGH or LOW, and then write the CLK pin HIGH then LOW. This saves the value of the DIN pin into the first bit of the shift register, and moves all the other bits along the register. (For example, if the register was 0100 and we clocked, it would become 0010).
 
 We then iterate through the remaining 19 bits, writing their value to DIN and clocking it into the register. Pulling STR HIGH then LOW latches the values, and then pulling BLK LOW reactivates the display, putting power through those pins we just activated.
-> I will continue to add to this devlog as development progresses.
+
+Being able to communicate via Serial allows easy enough testing without having the reflash the board each and every time. In this case the host sends 3 bytes to the XIAO, which is enough to set a single digits' buffer.
+The first four bits of the first byte corresponds to the digits' index, 0 thru 10. The remaining bits and bytes are the *pattern* that is to be assigned to that digit.
+So, say we sent the following bytes to the device:<br>
+> `BBBBAAAA DDDDCCCC FFFFEEEE`<br>`01010011 00101001 10010000`
+
+We mask the first four bits of the first byte for the digit, so `0011`, or index 3.
+We then make a 32 bit value based on the remaining bits, like so:<br>
+> `00000000 0000BBBB DDDDCCCC FFFFEEEE`<br>`00000000 00000101 00101001 10010000`
 
 ### Tags
 To aid in the discoverability of this for those that salvage identical or similar displays and also wish to repurpose them, the following terms have been collected...

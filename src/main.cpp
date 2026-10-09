@@ -114,7 +114,7 @@ void updateDisplay(uint32_t delayus = 1000) {
   }
 }
 
-void setDigitBuffer(uint8_t digit, uint32_t packet) {
+bool setDigitBuffer(uint8_t digit, uint32_t packet) {
   bool t = false;
   for (const auto &spinner : spinners.entries) {
     if (t) {continue;}
@@ -125,10 +125,14 @@ void setDigitBuffer(uint8_t digit, uint32_t packet) {
   }
   if (t) {
     // the digit is being controlled by a spinner, don't write to it to avoid conflicts
+    return 0;
   } else {
     digitBuffers[digit] = (packet | (1UL << DIGITS[digit]));
+    return 1;
   }
+  return 0;
 }
+
 void setAllDigitsBuffer(uint32_t pack) {
   for (int i = 0; i < NUM_DIGITS; i++) {
     setDigitBuffer(i, pack);
@@ -171,7 +175,7 @@ void showTime(int style, bool update = false) {
   if (style == 1) {
     setDigitBuffer(0, 0);
     setDigitBuffer(1, PATTERN_NUMBERS[h1]);
-    setDigitBuffer(2, PATTERN_NUMBERS[h1]);
+    setDigitBuffer(2, PATTERN_NUMBERS[h2]);
     setDigitBuffer(3, 0);
     setDigitBuffer(4, PATTERN_NUMBERS[m1]);
     setDigitBuffer(5, PATTERN_NUMBERS[m2]);
@@ -231,7 +235,7 @@ bool isSpinner(uint8_t digit = -1) {
   return false;
 }
 
-void pollSpinners(boolean blankStopped = true) {
+void pollSpinners(boolean blankIfFinished = true) {
   // if there's no spinners, do nothing
   if (spinners.entries.empty()) {return;}
   
@@ -254,8 +258,8 @@ void pollSpinners(boolean blankStopped = true) {
 
     // if the number of times the spinner has looped (_count) is >= to the target iterations of the spinner, delete it from memory
     if (spinner._count >= spinner.iterations) {
-      if (blankStopped) {
-        setDigitBuffer(spinner._segment, 0);
+      if (blankIfFinished) {
+        setDigitBuffer(spinner.digit, 0);
       }
       si = spinners.entries.erase(si);
       continue;
@@ -265,10 +269,47 @@ void pollSpinners(boolean blankStopped = true) {
   }
 }
 
+uint8_t serialBuffer[10] = {};
+
+// position in the range of 0 <= p <= 7, where p corresponds to the bit from right to left, IE: {00000000 -> 76543210}
+bool getBit(u_char byte, int position) {
+  return (byte >> position) & 1; // shift the target bit to the first position, then compare it against 1 via bitwise AND
+}
+
+void checkSerial() {
+  // each full display pattern is 3 bytes - that's 24 bits and we're only ever going to use up to 20 of them for the HV
+  // we'll say that the first bit four bits are reserved to identify the digit index so a stream of 24 bits becomes:
+  
+  //  first    second   third
+  // PPPPRRRR PPPPPPPP PPPPPPPP
+  // 76543210 76543210 76543210
+  // 00000000 00000000 00000000
+  if (Serial.available() >= 3) {
+    uint8_t bytes[3] = {};
+    Serial.readBytes(bytes, 3);
+    
+    // 0x0F -> 00001111
+    uint8_t targetDigit = bytes[0] & 0x0F;
+    
+    // 00001111 -> 1+2+4+8=15 -> 0x0F
+    // 11110000 -> 16+32+64+128=240 -> 0xF0
+    
+    // shift the first byte up by 4, AND it with 00001111 to only get the first four bits of the actual packet, then move it to the first position in the 32 bit stream 
+    uint32_t final = ((uint32_t)(bytes[0] & 0xF0) << 12) | ((uint32_t)bytes[1] << 8) | (uint32_t)bytes[2];
+
+    if (setDigitBuffer(targetDigit, final)) {
+      Serial.println("OK");
+    } else {
+      Serial.println("ERR");
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(2000);
   Serial.println("Initialising...");
+  delay(10);
   pinMode(DIN, OUTPUT);
   pinMode(CLK, OUTPUT);
   pinMode(STR, OUTPUT);
@@ -277,7 +318,9 @@ void setup() {
   pixel.begin();
   pixel.clear();
   pixel.show();
+  delay(10);
   Serial.println("Initialisation finished.");
+  delay(10);
 }
 
 void loop() {
@@ -285,5 +328,6 @@ void loop() {
     showTime(/* hhmmss */ 1);
   }
   pollSpinners(true);
+  checkSerial();
   updateDisplay(); 
 }
