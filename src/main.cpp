@@ -38,7 +38,7 @@ Adafruit_NeoPixel pixel(1, NEOPIXEL, NEO_GRB + NEO_KHZ800);
 #define SEG_G  18
 #define SEG_UL  2
 #define SEG_DP 16
-#define SEG_CO 20
+#define SEG_CO 0
 
 // Each of the digit pins to their HVout pin...
 #define DIG_0  1
@@ -192,7 +192,7 @@ void showTime(int style, bool update = false) {
     setDigitBuffer(5, PATTERN_NUMBERS[m2]);
     setDigitBuffer(6, 0);
     setDigitBuffer(7, PATTERN_NUMBERS[s1]);
-    setDigitBuffer(8, PATTERN_NUMBERS[s2] | (seconds % 2 ? PATTERN_DP : 0));
+    setDigitBuffer(8, PATTERN_NUMBERS[s2] | (seconds % 2 ? PATTERN_DP | PATTERN_COMMA : 0));
     setDigitBuffer(9, 0);
   } else if (style == 2) {
     setDigitBuffer(0, seconds % 2 ? SEGMENT_G_MASK : 0);
