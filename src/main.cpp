@@ -7,6 +7,8 @@
 #define NEOPIXEL D4
 Adafruit_NeoPixel pixel(1, NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
+#define BUILTIN_BTN 9
+
 // Display dimensions
 #define NUM_DIGITS 10
 #define NUM_SEGMENTS 9
@@ -189,19 +191,19 @@ void showTime(int style, bool update = false) {
     setDigitBuffer(5, PATTERN_NUMBERS[m2]);
     setDigitBuffer(6, 0);
     setDigitBuffer(7, PATTERN_NUMBERS[s1]);
-    setDigitBuffer(8, PATTERN_NUMBERS[s2]);
+    setDigitBuffer(8, PATTERN_NUMBERS[s2] | (seconds % 2 ? PATTERN_DP : 0));
     setDigitBuffer(9, 0);
   } else if (style == 2) {
-    setDigitBuffer(0, 0);
+    setDigitBuffer(0, seconds % 2 ? SEGMENT_G_MASK : 0);
     setDigitBuffer(1, 0);
     setDigitBuffer(2, PATTERN_NUMBERS[h1]);
     setDigitBuffer(3, PATTERN_NUMBERS[h2]);
-    setDigitBuffer(6, 0);
-    setDigitBuffer(7, 0);
-    setDigitBuffer(4, PATTERN_NUMBERS[m1]);
-    setDigitBuffer(5, PATTERN_NUMBERS[m2]);
+    setDigitBuffer(4, 0);
+    setDigitBuffer(5, 0);
+    setDigitBuffer(6, PATTERN_NUMBERS[m1]);
+    setDigitBuffer(7, PATTERN_NUMBERS[m2]);
     setDigitBuffer(8, 0);
-    setDigitBuffer(9, 0);
+    setDigitBuffer(9, seconds % 2 ? SEGMENT_G_MASK : 0);
   }
   if (update) {updateDisplay();}
 }
@@ -335,6 +337,7 @@ void setup() {
   pixel.clear();
   pixel.show();
   delay(10);
+  pinMode(BUILTIN_BTN, INPUT_PULLDOWN);
   Serial.println("Initialisation finished.");
 }
 
@@ -362,15 +365,25 @@ void testDigits() {
     delay(5000);
   }
 }
-
+bool press = false;
+int mode = 1;
 void loop() {
+  if (digitalRead(BUILTIN_BTN)) {
+    if (!press) {
+      startSpinner(0, 1, 50);
+      mode = mode == 1 ? 2 : 1;
+      press = true;
+    }
+  } else {
+    press = false;
+  }
   pollSpinners(true);
   if (!isSpinner()) {
-    showTime(/* hhmmss */ 1);
+    showTime(/* hhmmss */ mode);
   }
   checkSerial();
   // testDigits();
-  updateDisplay(); 
+  updateDisplay(10000); 
   // Serial.println(digitBuffers[0], BIN); // prints 11111100000000011110, but nothing is displayed on the HV... It isn't a hardware problem.
   // delay(100);
 }
