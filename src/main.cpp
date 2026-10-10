@@ -192,7 +192,7 @@ void showTime(int style, bool update = false) {
     setDigitBuffer(5, PATTERN_NUMBERS[m2]);
     setDigitBuffer(6, 0);
     setDigitBuffer(7, PATTERN_NUMBERS[s1]);
-    setDigitBuffer(8, PATTERN_NUMBERS[s2] | (seconds % 2 ? PATTERN_DP | PATTERN_COMMA : 0));
+    setDigitBuffer(8, PATTERN_NUMBERS[s2] | (seconds % 2 ? PATTERN_DP : 0));
     setDigitBuffer(9, 0);
   } else if (style == 2) {
     setDigitBuffer(0, seconds % 2 ? SEGMENT_G_MASK : 0);
@@ -316,11 +316,18 @@ void checkSerial() {
   }
 }
 
+void fillDemoBuffer() {
+  for (int i = 0; i < 10; i++) {
+    setDigitBuffer(i, SEGMENT_MASKS[i]);
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(2000);
   Serial.println("Initialising...");
   delay(10);
+  fillDemoBuffer();
   pinMode(DIN, OUTPUT);
   pinMode(CLK, OUTPUT);
   pinMode(STR, OUTPUT);
@@ -329,7 +336,11 @@ void setup() {
   digitalWrite(CLK, LOW);
   digitalWrite(STR, LOW);
   digitalWrite(BLK, HIGH); // so it remains blanked until we write to it
-  clearDisplay();
+  uint8_t start = millis();
+  while (millis() < start + 5000) {
+    updateDisplay(10000);
+  }
+
   for (int i = 0; i < 11; i++) {
     startSpinner(i, 3, 50, true);
   }
@@ -366,6 +377,7 @@ void testDigits() {
     delay(5000);
   }
 }
+
 bool press = false;
 int mode = 2;
 void loop() {
