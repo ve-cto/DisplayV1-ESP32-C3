@@ -36,8 +36,9 @@ Adafruit_NeoPixel pixel(1, NEOPIXEL, NEO_GRB + NEO_KHZ800);
 #define SEG_E  17 
 #define SEG_F  19
 #define SEG_G  18
-#define SEG_H  2
+#define SEG_UL  2
 #define SEG_DP 16
+#define SEG_CO 20
 
 // Each of the digit pins to their HVout pin...
 #define DIG_0  1
@@ -366,7 +367,7 @@ void testDigits() {
   }
 }
 bool press = false;
-int mode = 1;
+int mode = 2;
 void loop() {
   if (digitalRead(BUILTIN_BTN)) {
     if (!press) {
