@@ -35,6 +35,10 @@ I settled on using a XIAO ESP32-C3 because I really like the form factor of the 
 <br><img src="https://ve-cto.github.io/portfolio/display_schematic1.png" alt="" width="500"><br>
 > I'll put the production files on here later, once I know that everything works.
 
+### Prototyping... 2?
+Just kidding, I did!
+The components for the PCB's arrived before the actual PCB's, so being impatient, I made a prototype on some perfboar using the same schematic. TODO:more
+
 ### Programming
 Whilst waiting for JLCPCB to make and ship out my boards, I started working on programming the XIAO. 
 I couldn't find any libraries that interface with the HV5812, so we're just diving into it.

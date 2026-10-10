@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Adafruit_Neopixel.h>
+#include <SECRETS.h> // wifi ssid & pass
 #include <array>
 #include <vector>
 
@@ -16,28 +17,37 @@ Adafruit_NeoPixel pixel(1, NEOPIXEL, NEO_GRB + NEO_KHZ800);
 #define STR D2 // Strobe (Display)
 #define BLK D3 // Blank (Clear)
 
+/*
+*   A
+* F   B
+*   G
+* E   C
+*   D
+*    DP
+*     H
+*/
 // Each of the segment pins to their corresponding HVout pin on the HV5812...
-#define SEG_A  17
-#define SEG_B  16
-#define SEG_F  1
-#define SEG_G  2
-#define SEG_C  15
-#define SEG_E  3
-#define SEG_D  14
-#define SEG_DP 4
-#define SEG_H  18
+#define SEG_A  3
+#define SEG_B  4
+#define SEG_C  5
+#define SEG_D  6
+#define SEG_E  17 
+#define SEG_F  19
+#define SEG_G  18
+#define SEG_H  2
+#define SEG_DP 16
 
 // Each of the digit pins to their HVout pin...
-#define DIG_0  19
-#define DIG_1  13
-#define DIG_2  12
-#define DIG_3  11
-#define DIG_4  10
-#define DIG_5  9
-#define DIG_6  8
-#define DIG_7  7
-#define DIG_8  6
-#define DIG_9  5
+#define DIG_0  1
+#define DIG_1  15
+#define DIG_2  14
+#define DIG_3  13
+#define DIG_4  12
+#define DIG_5  11
+#define DIG_6  10
+#define DIG_7  9
+#define DIG_8  8
+#define DIG_9  7
 
 #include <patterns.h>
 
@@ -80,57 +90,55 @@ Spinners spinners;
 
 void writePacket(uint32_t packet) {
   digitalWrite(BLK, HIGH);
-  delay(2);
-  // clock in an extra bit because we're only using 19 of them (and there are 20 total)
-  digitalWrite(DIN, LOW);
-  delay(2);
-  digitalWrite(CLK, HIGH);
-  delay(2);
-  digitalWrite(CLK, LOW);
-  for (int j = 0; j < 19; j++) {
-    // int k = 18 - j; 
-    bool bitValue = (packet & (1U << j)) != 0; // get if the bit at position j is 1
+  delayMicroseconds(1);
+
+  for (int j = 0; j < 20; j++) {
+    bool bitValue = (packet & (1UL << j)) != 0;
     digitalWrite(DIN, bitValue ? HIGH : LOW);
-    delay(2);
+    delayMicroseconds(1);
     digitalWrite(CLK, HIGH);
-    delay(2);
+    delayMicroseconds(1);
     digitalWrite(CLK, LOW);
   }
+
   digitalWrite(DIN, LOW);
-  delay(2);
+  delayMicroseconds(1);
   digitalWrite(STR, HIGH);
-  delay(2);
+  delayMicroseconds(1);
   digitalWrite(STR, LOW);
-  delay(2);
+  delayMicroseconds(1);
   digitalWrite(BLK, LOW);
-  delay(2);
+  delayMicroseconds(1);
 }
-void updateDisplay(uint32_t delayus = 1000) {
-  long lastUpdate = micros();
-  for (int i = 0; i < 10; i++) {
-    if (micros() < (lastUpdate + delayus)) {continue;}
+void updateDisplay(uint32_t delayus = 10000) {
+  uint32_t start = micros();
+  for (int i = 0; i < NUM_DIGITS; i++) {
+    if (delayus > 0) {
+      while (micros() - start < (delayus * (i + 1)) / NUM_DIGITS) {
+        // wait until the next digit
+      }
+    }
     writePacket(digitBuffers[i]);
-    lastUpdate = micros();
   }
 }
 
 bool setDigitBuffer(uint8_t digit, uint32_t packet) {
-  bool t = false;
-  for (const auto &spinner : spinners.entries) {
-    if (t) {continue;}
-    if (spinner.digit == digit) {
-      t = true;
-      break;
-    }
-  }
-  if (t) {
-    // the digit is being controlled by a spinner, don't write to it to avoid conflicts
-    return 0;
-  } else {
+  // bool t = false;
+  // for (const auto &spinner : spinners.entries) {
+  //   if (t) {continue;}
+  //   if (spinner.digit == digit) {
+  //     t = true;
+  //     break;
+  //   }
+  // }
+  // if (t) {
+  //   // the digit is being controlled by a spinner, don't write to it to avoid conflicts
+  //   return 0;
+  // } else {
     digitBuffers[digit] = (packet | (1UL << DIGITS[digit]));
     return 1;
-  }
-  return 0;
+  // }
+  // return 0;
 }
 
 void setAllDigitsBuffer(uint32_t pack) {
@@ -221,8 +229,8 @@ void stopSpinner(uint8_t digit, bool clear = true) {
   }
 }
 
-bool isSpinner(uint8_t digit = -1) {
-  if (digit == -1) {return !spinners.entries.empty();}
+bool isSpinner(uint8_t digit = 255) {
+  if (digit == 255) {return !spinners.entries.empty();}
   
   for (auto si = spinners.entries.begin(); si != spinners.entries.end();) {
     auto &spinner = *si;
@@ -253,7 +261,7 @@ void pollSpinners(boolean blankIfFinished = true) {
         spinner._count += 1;
       }
     } else {
-      continue;
+      updateDisplay();
     }
 
     // if the number of times the spinner has looped (_count) is >= to the target iterations of the spinner, delete it from memory
@@ -278,7 +286,7 @@ bool getBit(u_char byte, int position) {
 
 void checkSerial() {
   // each full display pattern is 3 bytes - that's 24 bits and we're only ever going to use up to 20 of them for the HV
-  // we'll say that the first bit four bits are reserved to identify the digit index so a stream of 24 bits becomes:
+  // we'll say that the first bytes' first four bits are reserved to identify the digit index so a stream of 24 bits becomes:
   
   //  first    second   third
   // PPPPRRRR PPPPPPPP PPPPPPPP
@@ -294,7 +302,7 @@ void checkSerial() {
     // 00001111 -> 1+2+4+8=15 -> 0x0F
     // 11110000 -> 16+32+64+128=240 -> 0xF0
     
-    // shift the first byte up by 4, AND it with 00001111 to only get the first four bits of the actual packet, then move it to the first position in the 32 bit stream 
+    // AND the first byte with 11110000 to only get the four bits of the packet, then move it to its' position in the 32 bit stream, the other bytes can stay as-is but they also have to be moved 
     uint32_t final = ((uint32_t)(bytes[0] & 0xF0) << 12) | ((uint32_t)bytes[1] << 8) | (uint32_t)bytes[2];
 
     if (setDigitBuffer(targetDigit, final)) {
@@ -314,20 +322,55 @@ void setup() {
   pinMode(CLK, OUTPUT);
   pinMode(STR, OUTPUT);
   pinMode(BLK, OUTPUT);
-  startSpinner(0, 3);
+  digitalWrite(DIN, LOW);
+  digitalWrite(CLK, LOW);
+  digitalWrite(STR, LOW);
+  digitalWrite(BLK, HIGH); // so it remains blanked until we write to it
+  clearDisplay();
+  for (int i = 0; i < 11; i++) {
+    startSpinner(i, 3, 50, true);
+  }
+
   pixel.begin();
   pixel.clear();
   pixel.show();
   delay(10);
   Serial.println("Initialisation finished.");
-  delay(10);
+}
+
+void testSegments() {
+  for (int d = 0; d < 1; d++) {  // test only digit 0 first
+    for (int s = 0; s < 9; s++) {
+      clearDisplay();
+      setDigitBuffer(d, SEGMENT_MASKS[s]);
+      writePacket(digitBuffers[d]);
+      Serial.print(F("Writing segment: "));
+      Serial.println(s);
+      delay(5000);
+    }
+  }
+}
+
+void testDigits() {
+  for (int d = 0; d < 10; d++) {
+    clearDisplay();
+    setAllDigitsBuffer(0);
+    setDigitBuffer(d, PATTERN_8);
+    writePacket(digitBuffers[d]);
+    Serial.print(F("Writing digit: "));
+    Serial.println(d);
+    delay(5000);
+  }
 }
 
 void loop() {
+  pollSpinners(true);
   if (!isSpinner()) {
     showTime(/* hhmmss */ 1);
   }
-  pollSpinners(true);
   checkSerial();
+  // testDigits();
   updateDisplay(); 
+  // Serial.println(digitBuffers[0], BIN); // prints 11111100000000011110, but nothing is displayed on the HV... It isn't a hardware problem.
+  // delay(100);
 }
